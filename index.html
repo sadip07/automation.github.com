@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Automation Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Quill.js Rich Text Editor CSS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <!-- Quill.js Rich Text Editor JS -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="/static/js/main.js"></script>
+    <!-- Authentication JavaScript -->
+    <script src="/static/js/auth.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgDark: '#1E293B',
+                        primary: '#8B5CF6',
+                        secondary: '#EC4899',
+                        accent: '#34D399',
+                        glass: 'rgba(255, 255, 255, 0.1)',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'slide-in': 'slideIn 0.5s ease-out forwards',
+                        'fade-up': 'fadeUp 0.5s ease-out forwards',
+                    },
+                    backdropBlur: {
+                        'xs': '2px',
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Loading animation */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111827;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .loader-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #8B5CF6;
+            border-radius: 50%;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .gradient-sidebar {
+            background: linear-gradient(to bottom, #8B5CF6, #EC4899);
+            animation: slideIn 0.5s ease-out forwards;
+            backdrop-filter: blur(8px);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45);
+        }
+        
+        .neon-button {
+            background: linear-gradient(45deg, #34D399, #3B82F6);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(52, 211, 153, 0.5);
+        }
+        
+        .neon-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(52, 211, 153, 0.7);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(52, 211, 153, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+            }
+        }
+        
+        .nav-btn {
+            transition: all 0.3s ease;
+            border-radius: 0.5rem;
+            margin: 0.5rem 0;
+            padding: 0.75rem 1rem;
+        }
+        
+        .nav-btn:hover {
+            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        }
+        
+        /* Section animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+        
+        .section {
+            display: none;
+            animation: fadeUp 0.5s ease forwards;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        /* Mobile menu */
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 50;
+            transition: all 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-menu.active {
+                display: block;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+            
+            .mobile-menu .sidebar {
+                display: block;
+                position: fixed;
+                width: 80%;
+                max-width: 300px;
+                animation: slideIn 0.3s ease forwards;
+            }
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1E293B;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.5);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.7);
+        }
+        
+        /* Quill editor dark theme */
+        .ql-toolbar.ql-snow {
+            background-color: rgba(55, 65, 81, 0.8) !important;
+            backdrop-filter: blur(8px);
+            border-color: rgba(75, 85, 99, 0.5) !important;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+        
+        .ql-container.ql-snow {
+            background-color: rgba(31, 41, 55, 0.8) !important;
+            backdrop-filter: blur(8px);
+            border-color: rgba(75, 85, 99, 0.5) !important;
+            color: #E5E7EB !important;
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+            min-height: 200px;
+        }
+        
+        .ql-editor p {
+            color: #E5E7EB !important;
+        }
+        
+        .ql-snow .ql-stroke {
+            stroke: #9CA3AF !important;
+        }
+        
+        .ql-snow .ql-fill {
+            fill: #9CA3AF !important;
+        }
+        
+        .ql-snow.ql-toolbar button:hover .ql-stroke {
+            stroke: #EC4899 !important;
+        }
+        
+        .ql-snow.ql-toolbar button:hover .ql-fill {
+            fill: #EC4899 !important;
+        }
+        
+        .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+            stroke: #EC4899 !important;
+        }
+        
+        .ql-snow.ql-toolbar button.ql-active .ql-fill {
+            fill: #EC4899 !important;
+        }
+        
+        /* Light theme styles */
+        .light-theme {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        
+        .light-theme .bg-gray-900 {
+            background-color: #f9fafb;
+        }
+        
+        .light-theme .bg-gray-800 {
+            background-color: #ffffff;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        .light-theme .bg-gray-700 {
+            background-color: #f3f4f6;
+        }
+        
+        .light-theme .text-white {
+            color: #1f2937;
+        }
+        
+        .light-theme .text-gray-400 {
+            color: #4b5563;
+        }
+        
+        .light-theme .border-gray-700 {
+            border-color: #e5e7eb;
+        }
+        
+        .light-theme .border-gray-600 {
+            border-color: #d1d5db;
+        }
+        
+        .light-theme #loader {
+            background-color: #f9fafb;
+        }
+        
+        .light-theme .spinner {
+            border-color: rgba(31, 41, 55, 0.1);
+            border-top-color: #EC4899;
+        }
+        
+        .light-theme .ql-toolbar.ql-snow {
+            background-color: #f9fafb !important;
+            border-color: #d1d5db !important;
+        }
+        
+        .light-theme .ql-container.ql-snow {
+            background-color: #ffffff !important;
+            border-color: #d1d5db !important;
+            color: #1f2937 !important;
+        }
+        
+        .light-theme .ql-editor p {
+            color: #1f2937 !important;
+        }
+        
+        .light-theme .ql-snow .ql-stroke {
+            stroke: #4b5563 !important;
+        }
+        
+        .light-theme .ql-snow .ql-fill {
+            fill: #4b5563 !important;
+        }
+        
+        .light-theme ::-webkit-scrollbar-track {
+            background: #f3f4f6;
+        }
+        
+        .light-theme ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+        }
+        
+        .light-theme ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        #logout-btn {
+            background: linear-gradient(45deg, #34D399, #10B981);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+        }
+        
+        #logout-btn:hover {
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.7);
+            animation: logout-pulse 2s infinite;
+        }
+        
+        @keyframes logout-pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-bgDark text-white min-h-screen">
+    <!-- Loading Screen -->
+    <div id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Mobile Menu Button -->
+    <div class="md:hidden fixed top-4 right-4 z-50">
+        <button id="mobile-menu-btn" class="neon-button p-2">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="mobile-menu">
+        <div class="sidebar"></div>
+    </div>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="gradient-sidebar fixed h-screen w-64 p-6 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center space-x-4 mb-8">
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=6366F1&color=fff" alt="Profile" class="w-10 h-10 rounded-full">
+                    <div>
+                        <h2 class="font-semibold">Welcome back</h2>
+                        <p class="text-sm opacity-75" id="username">Admin</p>
+                    </div>
+                </div>
+                
+                <nav class="space-y-2">
+                    <button class="nav-btn w-full text-left flex items-center space-x-3" data-section="dashboard">
+                        <i class="fas fa-home w-6"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="nav-btn w-full text-left flex items-center space-x-3" data-section="keyword-upload">
+                        <i class="fas fa-upload w-6"></i>
+                        <span>Keyword Upload</span>
+                    </button>
+                    <button class="nav-btn w-full text-left flex items-center space-x-3" data-section="content-creation">
+                        <i class="fas fa-pen-fancy w-6"></i>
+                        <span>Content Creation</span>
+                    </button>
+                    <button class="nav-btn w-full text-left flex items-center space-x-3" data-section="articles">
+                        <i class="fas fa-newspaper w-6"></i>
+                        <span>Articles</span>
+                    </button>
+                    <button class="nav-btn w-full text-left flex items-center space-x-3" data-section="api-settings">
+                        <i class="fas fa-cogs text-xl"></i>
+                        <span>API Settings</span>
+                    </button>
+                    
+                    <button class="nav-btn w-full text-left flex items-center space-x-3" data-section="social-media">
+                        <i class="fas fa-share-alt text-xl"></i>
+                        <span>Social Media</span>
+                    </button>
+                    
+                    <button class="nav-btn w-full text-left flex items-center space-x-3" data-section="profile">
+                        <i class="fas fa-user w-6"></i>
+                        <span>Profile</span>
+                    </button>
+                </nav>
+            </div>
+            
+            <div>
+                <a href="/logout" id="logout-btn" class="neon-button w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-accent to-emerald-600 hover:scale-105 transition-transform duration-300 hover:shadow-lg">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="ml-64 flex-1 p-8">
+            <!-- Flash Messages -->
+            <div id="flash-messages" class="mb-6">
+                <!-- Flash messages will be dynamically added here by JavaScript -->
+            </div>
+            
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <h1 class="text-3xl font-bold mb-8">Dashboard</h1>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="glass-card p-6 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold">Total Articles</h3>
+                            <i class="fas fa-newspaper text-accent text-2xl"></i>
+                        </div>
+                        <p class="text-4xl font-bold" id="total-articles">0</p>
+                    </div>
+                    <div class="glass-card p-6 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold">API Credits</h3>
+                            <i class="fas fa-bolt text-accent text-2xl"></i>
+                        </div>
+                        <p class="text-4xl font-bold" id="api-credits">0</p>
+                    </div>
+                    <div class="glass-card p-6 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold">Published</h3>
+                            <i class="fas fa-check-circle text-accent text-2xl"></i>
+                        </div>
+                        <p class="text-4xl font-bold" id="published-count">0</p>
+                    </div>
+                </div>
+                
+                <!-- Status Log Card -->
+                <div class="glass-card p-6 rounded-xl mt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold">Status Log</h3>
+                        <button id="clear-log" class="text-sm px-3 py-1 rounded bg-glass hover:bg-white/10 transition">
+                            <i class="fas fa-trash-alt mr-1"></i> Clear
+                        </button>
+                    </div>
+                    <div class="status-log space-y-3 max-h-[400px] overflow-y-auto p-2">
+                        <!-- Log entries will be added here dynamically -->
+                        <div class="bg-gray-700 rounded-lg p-3">
+                            <div class="flex justify-between">
+                                <p class="text-sm font-medium">System Ready</p>
+                                <span class="text-xs text-gray-400" id="system-timestamp"></span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">Automation tool initialized and ready to process content</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Keyword Upload Section -->
+            <section id="keyword-upload" class="section">
+                <h1 class="text-3xl font-bold mb-8">Keyword Upload</h1>
+                <div class="glass-card p-6 rounded-xl">
+                    <form id="keyword-form" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Upload Keywords</label>
+                            <div class="flex items-center space-x-4">
+                                <input type="file" id="keyword-file" accept=".txt" class="hidden">
+                                <label for="keyword-file" class="neon-button cursor-pointer flex items-center space-x-2">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Choose File</span>
+                                </label>
+                                <span id="file-name" class="text-sm opacity-75">No file chosen</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">Upload a .txt file with one keyword per line</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Word Count Per Article</label>
+                                <select id="batch-word-count-select" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                                    <option value="300">300 words</option>
+                                    <option value="500" selected>500 words</option>
+                                    <option value="750">750 words</option>
+                                    <option value="1000">1000 words</option>
+                                    <option value="1500">1500 words</option>
+                                    <option value="2000">2000 words</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Prompt Template</label>
+                                <input type="text" id="prompt-template" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition" value="Write a comprehensive article about {keyword} with detailed information." placeholder="Use {keyword} as placeholder">
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Tracking -->
+                        <div id="batch-progress" class="mt-4 hidden">
+                            <div class="mb-2 flex justify-between">
+                                <span class="text-sm" id="current-keyword">Processing...</span>
+                                <span class="text-sm" id="batch-progress-text">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                <div id="batch-progress-bar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-2.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="neon-button w-full">Process Keywords</button>
+                    </form>
+                </div>
+                
+                <!-- Quick Tips Card -->
+                <div class="glass-card p-6 rounded-xl mt-6">
+                    <h3 class="text-xl font-bold mb-4">Tips for Best Results</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-accent mt-1 mr-2"></i>
+                            <span>Use <strong>specific keywords</strong> for better content quality</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-accent mt-1 mr-2"></i>
+                            <span>For longer, more detailed articles, increase the word count</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-accent mt-1 mr-2"></i>
+                            <span>Customize the prompt template to include specific instructions (e.g., "Write a comprehensive guide about {keyword} including tips and best practices")</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-accent mt-1 mr-2"></i>
+                            <span>If processing fails, try with fewer keywords at a time</span>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Content Creation Section -->
+            <section id="content-creation" class="section">
+                <h1 class="text-3xl font-bold mb-8">Content Creation</h1>
+                <div class="glass-card p-6 rounded-xl space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Keyword</label>
+                        <input type="text" id="keyword-input" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Content Type</label>
+                        <select id="content-type" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                            <option value="article">Article</option>
+                            <option value="blog">Blog Post</option>
+                            <option value="social">Social Media</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">AI Model</label>
+                        <select id="ai-model" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                            <option value="gpt-4">GPT-4</option>
+                            <option value="claude">Claude</option>
+                            <option value="gemini">Gemini</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Editor</label>
+                        <div id="editor"></div>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button id="generate-btn" class="neon-button flex-1">Generate Content</button>
+                        <button id="save-btn" class="neon-button flex-1">Save Draft</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Articles Section -->
+            <section id="articles" class="section">
+                <h1 class="text-3xl font-bold mb-8">Articles</h1>
+                <div class="glass-card p-6 rounded-xl">
+                    <!-- Modern card-based layout for articles -->
+                    <div id="articles-container" class="min-h-[200px]">
+                        <!-- Articles will be dynamically added here as cards -->
+                        <div class="flex justify-center items-center py-20">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Filter and Sort Controls -->
+                    <div class="mt-6 flex flex-wrap gap-4 items-center">
+                        <div class="flex-1">
+                            <select id="article-status-filter" class="bg-glass backdrop-blur-sm rounded-lg p-2 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                                <option value="all">All Status</option>
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <select id="article-sort" class="bg-glass backdrop-blur-sm rounded-lg p-2 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="az">A-Z</option>
+                                <option value="za">Z-A</option>
+                            </select>
+                        </div>
+                        <button id="refresh-articles" class="neon-button py-2">
+                            <i class="fas fa-sync-alt mr-2"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- View Article Modal Template (hidden by default) -->
+                <div id="article-modal-template" class="hidden">
+                    <div class="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm">
+                        <div class="glass-card m-4 p-6 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-fadeUp">
+                            <div class="flex justify-between items-start mb-4">
+                                <h2 class="text-2xl font-bold article-title">Article Title</h2>
+                                <button class="close-modal text-gray-400 hover:text-white">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="article-status px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-300">draft</span>
+                                <span class="article-keyword px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-300">Keyword: example</span>
+                                <span class="article-date px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-300">Created: 01/01/2023</span>
+                            </div>
+                            <div class="article-content prose prose-invert max-w-none mb-6">
+                                Content will appear here
+                            </div>
+                            <div class="flex justify-end mt-6 space-x-3">
+                                <button class="edit-article px-4 py-2 bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/40 transition">Edit</button>
+                                <button class="publish-article px-4 py-2 bg-green-500/20 text-green-300 rounded hover:bg-green-500/40 transition">Publish</button>
+                                <button class="delete-article px-4 py-2 bg-red-500/20 text-red-300 rounded hover:bg-red-500/40 transition">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- API Settings Section -->
+            <section id="api-settings" class="section">
+                <h1 class="text-3xl font-bold mb-8">API Settings</h1>
+                <div class="glass-card p-6 rounded-xl">
+                    <form id="api-settings-form" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">API Provider</label>
+                            <select id="api-provider" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic Claude</option>
+                                <option value="gemini">Google Gemini</option>
+                                <option value="huggingface">Hugging Face</option>
+                                <option value="grok">Grok</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">API Key</label>
+                            <input type="password" id="api-key" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition" placeholder="Enter your API key">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Model</label>
+                            <select id="api-model" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                                <!-- OpenAI Models -->
+                                <option value="gpt-4" data-provider="openai">GPT-4</option>
+                                <option value="gpt-4-turbo" data-provider="openai">GPT-4 Turbo</option>
+                                <option value="gpt-3.5-turbo" data-provider="openai">GPT-3.5 Turbo</option>
+                                
+                                <!-- Anthropic Models -->
+                                <option value="claude-3-opus" data-provider="anthropic">Claude 3 Opus</option>
+                                <option value="claude-3-sonnet" data-provider="anthropic">Claude 3 Sonnet</option>
+                                <option value="claude-3-haiku" data-provider="anthropic">Claude 3 Haiku</option>
+                                
+                                <!-- Google Models -->
+                                <option value="gemini-pro" data-provider="gemini">Gemini Pro</option>
+                                <option value="gemini-ultra" data-provider="gemini">Gemini Ultra</option>
+                                
+                                <!-- Hugging Face Models -->
+                                <option value="mistralai/Mistral-7B-Instruct-v0.2" data-provider="huggingface">Mistral 7B</option>
+                                <option value="meta-llama/Llama-2-70b-chat-hf" data-provider="huggingface">Llama 2 70B</option>
+                                
+                                <!-- Grok Models -->
+                                <option value="grok-1" data-provider="grok">Grok-1</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex justify-between">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="is-active" class="w-4 h-4 bg-glass backdrop-blur-sm rounded focus:ring-accent text-accent" checked>
+                                <label for="is-active" class="ml-2 text-sm font-medium">Set as active provider</label>
+                            </div>
+                            <button type="button" id="test-connection-btn" class="text-sm text-accent hover:underline">Test connection</button>
+                        </div>
+                        
+                        <button type="submit" class="neon-button w-full hover:scale-105 transition-transform duration-300">Save API Settings</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Profile Section -->
+            <section id="profile" class="section">
+                <h1 class="text-3xl font-bold mb-8">Profile</h1>
+                <div class="glass-card p-6 rounded-xl">
+                    <form id="profile-form" class="space-y-6">
+                        <div class="flex items-center space-x-6 mb-6">
+                            <img src="https://ui-avatars.com/api/?name=Admin&background=6366F1&color=fff" alt="Profile" class="w-20 h-20 rounded-full">
+                            <button type="button" class="neon-button">Change Avatar</button>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Username</label>
+                            <input type="text" id="profile-username" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Email</label>
+                            <input type="email" id="profile-email" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">New Password</label>
+                            <input type="password" id="profile-password" class="w-full bg-glass backdrop-blur-sm rounded-lg p-3 border border-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition">
+                        </div>
+                        <button type="submit" class="neon-button w-full">Update Profile</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Quill editor
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'header': 1 }, { 'header': 2 }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'script': 'sub'}, { 'script': 'super' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    [{ 'direction': 'rtl' }],
+                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'font': [] }],
+                    [{ 'align': [] }],
+                    ['clean']
+                ]
+            }
+        });
+        
+        // Check user authentication status
+        function checkAuthStatus() {
+            fetch('/api/user/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.authenticated) {
+                        // If not authenticated, redirect to login
+                        window.location.href = '/login';
+                    } else {
+                        // Update username display
+                        document.getElementById('username').textContent = data.username;
+                        
+                        // Check for query parameters that might contain flash messages
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const flashMessage = urlParams.get('flash_message');
+                        const flashCategory = urlParams.get('flash_category') || 'success';
+                        
+                        if (flashMessage) {
+                            showFlashMessage(flashMessage, flashCategory);
+                            
+                            // Remove query parameters without reloading the page
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Auth status check failed:', error);
+                });
+        }
+
+        // Display flash message
+        function showFlashMessage(message, category = 'success') {
+            const flashContainer = document.getElementById('flash-messages');
+            
+            // Define background and text colors based on category
+            let bgColor = 'bg-green-500/20';
+            let textColor = 'text-green-300';
+            
+            if (category === 'danger' || category === 'error') {
+                bgColor = 'bg-red-500/20';
+                textColor = 'text-red-300';
+            } else if (category === 'warning') {
+                bgColor = 'bg-yellow-500/20';
+                textColor = 'text-yellow-300';
+            } else if (category === 'info') {
+                bgColor = 'bg-blue-500/20';
+                textColor = 'text-blue-300';
+            }
+            
+            const flashElement = document.createElement('div');
+            flashElement.className = `p-4 ${bgColor} ${textColor} rounded-lg mb-4 flex justify-between items-center animate-fadeUp`;
+            flashElement.innerHTML = `
+                <span>${message}</span>
+                <button class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            // Add close button functionality
+            const closeButton = flashElement.querySelector('button');
+            closeButton.addEventListener('click', () => {
+                flashElement.style.opacity = '0';
+                setTimeout(() => {
+                    flashContainer.removeChild(flashElement);
+                }, 300);
+            });
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                flashElement.style.opacity = '0';
+                setTimeout(() => {
+                    if (flashContainer.contains(flashElement)) {
+                        flashContainer.removeChild(flashElement);
+                    }
+                }, 300);
+            }, 5000);
+            
+            flashContainer.appendChild(flashElement);
+        }
+
+        // Check auth status when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthStatus();
+            
+            // Load API settings
+            loadApiSettings();
+            
+            // Initialize API provider/model filtering
+            initApiModelFiltering();
+        });
+
+        // Load existing API settings
+        function loadApiSettings() {
+            fetch('/api/settings')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const settings = data.settings;
+                        if (settings.length > 0) {
+                            const activeSetting = settings.find(s => s.is_active);
+                            if (activeSetting) {
+                                // Populate form with active settings
+                                document.getElementById('api-provider').value = activeSetting.api_provider;
+                                // Trigger provider change to filter models
+                                document.getElementById('api-provider').dispatchEvent(new Event('change'));
+                                document.getElementById('api-model').value = activeSetting.model_name;
+                                document.getElementById('is-active').checked = activeSetting.is_active;
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading API settings:', error);
+                });
+        }
+        
+        // Initialize API model filtering based on selected provider
+        function initApiModelFiltering() {
+            const providerSelect = document.getElementById('api-provider');
+            const modelSelect = document.getElementById('api-model');
+            
+            providerSelect.addEventListener('change', () => {
+                const selectedProvider = providerSelect.value;
+                
+                // Hide all options first
+                Array.from(modelSelect.options).forEach(option => {
+                    option.style.display = 'none';
+                });
+                
+                // Show only options for the selected provider
+                Array.from(modelSelect.options).forEach(option => {
+                    if (option.dataset.provider === selectedProvider) {
+                        option.style.display = '';
+                    }
+                });
+                
+                // Select the first available option
+                const firstAvailableOption = Array.from(modelSelect.options).find(
+                    option => option.dataset.provider === selectedProvider
+                );
+                
+                if (firstAvailableOption) {
+                    modelSelect.value = firstAvailableOption.value;
+                }
+            });
+            
+            // Trigger change event to initialize
+            providerSelect.dispatchEvent(new Event('change'));
+        }
+        
+        // Handle API settings form submission
+        const apiSettingsForm = document.getElementById('api-settings-form');
+        apiSettingsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const provider = document.getElementById('api-provider').value;
+            const apiKey = document.getElementById('api-key').value;
+            const modelName = document.getElementById('api-model').value;
+            const isActive = document.getElementById('is-active').checked;
+            
+            if (!apiKey) {
+                showFlashMessage('API key is required', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const submitButton = apiSettingsForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+            submitButton.disabled = true;
+            
+            // Prepare data for API
+            const settings = {
+                provider: provider,
+                api_key: apiKey,
+                model_name: modelName,
+                is_active: isActive,
+                temperature: 0.7,
+                max_tokens: 1000
+            };
+            
+            // Send request to backend
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset button state
+                submitButton.innerHTML = originalButtonText;
+                submitButton.disabled = false;
+                
+                if (data.status === 'success') {
+                    // Show success message
+                    showFlashMessage('API Keys Saved Successfully!', 'success');
+                    
+                    // Clear API key field
+                    document.getElementById('api-key').value = '';
+                } else {
+                    // Show error message
+                    showFlashMessage('Error: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                // Reset button state
+                submitButton.innerHTML = originalButtonText;
+                submitButton.disabled = false;
+                
+                // Show error message
+                showFlashMessage('Error saving API keys, please try again.', 'error');
+                console.error('Error:', error);
+            });
+        });
+        
+        // Handle test connection button
+        document.getElementById('test-connection-btn').addEventListener('click', () => {
+            const provider = document.getElementById('api-provider').value;
+            const apiKey = document.getElementById('api-key').value;
+            const modelName = document.getElementById('api-model').value;
+            
+            if (!apiKey) {
+                showFlashMessage('API key is required to test connection', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const testButton = document.getElementById('test-connection-btn');
+            const originalButtonText = testButton.innerHTML;
+            testButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Testing...';
+            testButton.disabled = true;
+            
+            // Test connection
+            fetch('/api/settings/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    provider: provider,
+                    api_key: apiKey,
+                    model_name: modelName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset button state
+                testButton.innerHTML = originalButtonText;
+                testButton.disabled = false;
+                
+                if (data.status === 'success') {
+                    // Show success message
+                    showFlashMessage('Connection successful!', 'success');
+                } else {
+                    // Show error message
+                    showFlashMessage('Connection failed: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                // Reset button state
+                testButton.innerHTML = originalButtonText;
+                testButton.disabled = false;
+                
+                // Show error message
+                showFlashMessage('Error testing connection', 'error');
+                console.error('Error:', error);
+            });
+        });
+
+        // Navigation
+        document.querySelectorAll('.nav-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const section = button.dataset.section;
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(section).classList.add('active');
+                button.classList.add('active');
+                
+                // Close mobile menu if open
+                document.getElementById('mobile-menu').classList.remove('active');
+            });
+        });
+
+        // Enhanced Logout handling
+        document.getElementById('logout-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Show confirmation dialog
+            if (confirm('Are you sure you want to log out?')) {
+                // Add animation to show logout is in progress
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span class="ml-2">Logging out...</span>';
+                this.classList.add('opacity-75');
+                
+                // Delay slightly to show the animation
+                setTimeout(() => {
+                    window.location.href = this.getAttribute('href');
+                }, 800);
+            }
+        });
+
+        // Mobile menu
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('active');
+        });
+
+        // File upload
+        document.getElementById('keyword-file').addEventListener('change', (e) => {
+            const fileName = e.target.files[0]?.name || 'No file chosen';
+            document.getElementById('file-name').textContent = fileName;
+        });
+
+        // Loading screen
+        window.addEventListener('load', () => {
+            document.getElementById('loader').classList.add('loader-hidden');
+        });
+
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.classList.remove('hidden');
+                
+                // Handle special sections
+                if (sectionId === 'articles') {
+                    window.location.href = '/articles';
+                }
+                else if (sectionId === 'profile') {
+                    window.location.href = '/profile';
+                }
+                else if (sectionId === 'api-settings') {
+                    window.location.href = '/api/settings/view';
+                }
+                else if (sectionId === 'social-media') {
+                    window.location.href = '/social-media';
+                }
+            }
+            
+            // Update active navigation button
+            const navButton = document.querySelector(`.nav-btn[data-section="${sectionId}"]`);
+            if (navButton) {
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                navButton.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html> 

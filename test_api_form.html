@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Settings Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a2e;
+            color: #e6e6e6;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #16213e;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #ff6b6b;
+            margin-top: 0;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #4cc9f0;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #0f3460;
+            color: #fff;
+        }
+        button {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #ff8e8e;
+        }
+        .button-group {
+            margin-top: 20px;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #0f3460;
+            white-space: pre-wrap;
+        }
+        .status-log {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #0f3460;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .success {
+            color: #4cc9f0;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Settings Test</h1>
+        
+        <form id="api-form">
+            <div class="form-group">
+                <label for="provider">API Provider</label>
+                <select id="provider" name="provider">
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="gemini">Gemini</option>
+                    <option value="huggingface">Hugging Face</option>
+                    <option value="grok">Grok</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="api-key">API Key</label>
+                <input type="password" id="api-key" name="api_key" placeholder="Enter your API key" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="model">Model Name</label>
+                <input type="text" id="model" name="model_name" value="gpt-3.5-turbo" required>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="is-active" name="is_active" checked>
+                    Set as active provider
+                </label>
+            </div>
+            
+            <div class="button-group">
+                <button type="button" id="test-btn">Test Connection</button>
+                <button type="submit">Save Settings</button>
+                <button type="button" id="get-settings-btn">Get Current Settings</button>
+            </div>
+        </form>
+        
+        <div class="status" id="status"></div>
+        
+        <h2>Status Log</h2>
+        <div class="status-log" id="status-log"></div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiForm = document.getElementById('api-form');
+            const testBtn = document.getElementById('test-btn');
+            const getSettingsBtn = document.getElementById('get-settings-btn');
+            const statusDiv = document.getElementById('status');
+            const statusLogDiv = document.getElementById('status-log');
+            
+            // Add to status log
+            function addToLog(message, isError = false) {
+                const timestamp = new Date().toLocaleTimeString();
+                const entry = `[${timestamp}] ${message}`;
+                const p = document.createElement('p');
+                p.textContent = entry;
+                if (isError) {
+                    p.classList.add('error');
+                } else {
+                    p.classList.add('success');
+                }
+                statusLogDiv.appendChild(p);
+                statusLogDiv.scrollTop = statusLogDiv.scrollHeight;
+            }
+            
+            // Show status
+            function showStatus(message, isError = false) {
+                statusDiv.textContent = message;
+                if (isError) {
+                    statusDiv.classList.add('error');
+                    statusDiv.classList.remove('success');
+                } else {
+                    statusDiv.classList.add('success');
+                    statusDiv.classList.remove('error');
+                }
+            }
+            
+            // Test connection
+            testBtn.addEventListener('click', async function() {
+                const provider = document.getElementById('provider').value;
+                const apiKey = document.getElementById('api-key').value;
+                const model = document.getElementById('model').value;
+                
+                if (!apiKey) {
+                    showStatus('Please enter an API key', true);
+                    return;
+                }
+                
+                try {
+                    addToLog(`Testing ${provider} API connection...`);
+                    testBtn.disabled = true;
+                    testBtn.textContent = 'Testing...';
+                    
+                    const response = await fetch('/api/settings/test', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            provider: provider,
+                            api_key: apiKey,
+                            model_name: model
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        showStatus(`API Test: ${data.message}`, false);
+                        addToLog(`API test successful: ${data.message}`);
+                    } else {
+                        showStatus(`API Test Failed: ${data.message}`, true);
+                        addToLog(`API test failed: ${data.message}`, true);
+                    }
+                } catch (error) {
+                    showStatus(`API Test Error: ${error.message}`, true);
+                    addToLog(`API test error: ${error.message}`, true);
+                } finally {
+                    testBtn.disabled = false;
+                    testBtn.textContent = 'Test Connection';
+                }
+            });
+            
+            // Save API settings
+            apiForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const provider = document.getElementById('provider').value;
+                const apiKey = document.getElementById('api-key').value;
+                const model = document.getElementById('model').value;
+                const isActive = document.getElementById('is-active').checked;
+                
+                if (!apiKey) {
+                    showStatus('Please enter an API key', true);
+                    return;
+                }
+                
+                try {
+                    addToLog(`Saving ${provider} API settings...`);
+                    const submitBtn = apiForm.querySelector('button[type="submit"]');
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Saving...';
+                    
+                    const response = await fetch('/api/settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            provider: provider,
+                            api_key: apiKey,
+                            model_name: model,
+                            is_active: isActive,
+                            temperature: 0.7,
+                            max_tokens: 1000
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        showStatus(`API Settings Saved: ${data.message}`, false);
+                        addToLog(`API settings saved successfully: ${data.message}`);
+                    } else {
+                        showStatus(`API Settings Failed: ${data.message}`, true);
+                        addToLog(`API settings failed: ${data.message}`, true);
+                    }
+                } catch (error) {
+                    showStatus(`API Settings Error: ${error.message}`, true);
+                    addToLog(`API settings error: ${error.message}`, true);
+                } finally {
+                    const submitBtn = apiForm.querySelector('button[type="submit"]');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Save Settings';
+                }
+            });
+            
+            // Get current settings
+            getSettingsBtn.addEventListener('click', async function() {
+                try {
+                    addToLog('Fetching current API settings...');
+                    getSettingsBtn.disabled = true;
+                    getSettingsBtn.textContent = 'Loading...';
+                    
+                    const response = await fetch('/api/settings');
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        const settings = data.settings;
+                        let message = 'Current API Settings:\n';
+                        
+                        if (settings.length === 0) {
+                            message += 'No API settings configured yet.';
+                        } else {
+                            settings.forEach(setting => {
+                                const activeStatus = setting.is_active ? 'ACTIVE' : 'inactive';
+                                message += `${setting.api_provider} (${activeStatus}): ${setting.model_name}\n`;
+                            });
+                        }
+                        
+                        showStatus(message, false);
+                        addToLog('API settings fetched successfully');
+                    } else {
+                        showStatus(`Failed to get settings: ${data.message}`, true);
+                        addToLog(`Failed to get settings: ${data.message}`, true);
+                    }
+                } catch (error) {
+                    showStatus(`Error getting settings: ${error.message}`, true);
+                    addToLog(`Error getting settings: ${error.message}`, true);
+                } finally {
+                    getSettingsBtn.disabled = false;
+                    getSettingsBtn.textContent = 'Get Current Settings';
+                }
+            });
+            
+            // Initial log
+            addToLog('API Settings Test Page loaded successfully');
+        });
+    </script>
+</body>
+</html> 
